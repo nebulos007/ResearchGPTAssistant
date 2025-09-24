@@ -36,6 +36,8 @@ class DocumentProcessor:
         # TODO: Create document storage structure
         self.documents = {}  # Store as: {doc_id: {'title': '', 'chunks': [], 'metadata': {}}}
         self.document_vectors = None  # Store TF-IDF vectors
+        self.chunk_to_doc_mapping = []  # Map chunk index to document ID
+        self.all_chunks = []  # Store all text chunks for vectorization
     
     def extract_text_from_pdf(self, pdf_path):
         """
