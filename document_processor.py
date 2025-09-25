@@ -65,12 +65,13 @@ class DocumentProcessor:
         extracted_text = ""
         # Your implementation here
         try:
-            
-        with open(pdf_path = "data/sample_papers/example.pdf", 'rb') as file:
-            reader = PdfReader(file)
+            with open(pdf_path, 'rb') as file:
+                reader = PdfReader(file)
             for page in reader.pages:
                 extracted_text += page.extract_text() + "\n"
-
+        except Exception as e:
+            print(f"Error extracting text from {pdf_path}: {e}")
+            extracted_text = ""
         return extracted_text
     
     def preprocess_text(self, text):
