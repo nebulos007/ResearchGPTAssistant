@@ -162,8 +162,47 @@ class DocumentProcessor:
             str: Document ID
         """
         # TODO: Implement complete document processing pipeline
-        doc_id = os.path.basename(pdf_path).replace('.pdf', '')
+     
         # Your implementation here
+        # Generate document ID from filename
+        doc_id = os.path.basename(pdf_path).replace('.pdf', '')
+        
+        self.logger.info(f"Processing document: {pdf_path}")
+        
+        try:
+            # Step 1: Extract text from PDF
+            raw_text = self.extract_text_from_pdf(pdf_path)
+            
+            if not raw_text:
+                self.logger.warning(f"No text extracted from {pdf_path}")
+                return doc_id
+            
+            # Step 2: Preprocess the text
+            preprocessed_text = self.preprocess_text(raw_text)
+            
+            # Step 3: Create chunks
+            chunks = self.chunk_text(preprocessed_text)
+            
+            # Step 4: Extract basic metadata
+            metadata = self._extract_metadata(raw_text, pdf_path)
+            
+            # Step 5: Store in document storage
+            self.documents[doc_id] = {
+                'title': metadata.get('title', doc_id),
+                'chunks': chunks,
+                'metadata': metadata,
+                'file_path': pdf_path,
+                'raw_text_length': len(raw_text),
+                'processed_text_length': len(preprocessed_text),
+                'num_chunks': len(chunks)
+            }
+            
+            self.logger.info(f"Successfully processed document {doc_id}")
+            self.logger.info(f"  - Raw text length: {len(raw_text)}")
+            self.logger.info(f"  - Processed text length: {len(preprocessed_text)}")
+            self.logger.info(f"  - Number of chunks: {len(chunks)}")
+        except Exception as e:
+            self.logger.error(f"Error processing document {pdf_path}: {e}")
         return doc_id
     
     def build_search_index(self):
