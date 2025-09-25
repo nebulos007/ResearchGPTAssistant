@@ -58,25 +58,33 @@ class DocumentProcessor:
         
         from PyPDF2 import PdfReader
 
-      
-        
-
         # TODO: Implement PDF text extraction
         extracted_text = ""
         # Your implementation here
         try:
-            with open(pdf_path, 'rb') as file:
-                reader = PdfReader(file)
-            for page in reader.pages:
-                extracted_text += page.extract_text() + "\n"
+            # Open PDF file in binary mode
+            with open('data/sample_papers', 'rb') as file:
+                # Create PDF reader object
+                reader = PyPDF2.PdfReader(file)
+                
+                # Extract text from all pages
+                text = ""
+                for page in reader.pages:
+                    text += page.extract_text() + "\n"
+                    
+                # Clean the extracted text
+                # Remove multiple newlines
+                text = re.sub(r'\n\s*\n', '\n\n', text)
+                # Replace multiple spaces with single space
+                text = re.sub(r'\s+', ' ', text)
+                # Normalize paragraph breaks
+                text = re.sub(r'\n\n+', '\n\n', text)
+                
+                return text.strip()
+                
         except Exception as e:
-            print(f"Error extracting text from {pdf_path}: {e}")
-            extracted_text = ""
-        extracted_text = re.sub(r'\n\s*\n', '\n\n', text)  # Multiple newlines to double newline
-        extracted_text = re.sub(r'\s+', ' ', text)         # Multiple spaces to single space
-        extracted_text = re.sub(r'\n\n+', '\n\n', text)   # Multiple paragraph breaks to double newline
-        
-        return extracted_text
+            print(f"Error extracting text from {'data/sample_papers'}: {str(e)}")
+            return ""
     
     def preprocess_text(self, text):
         """
@@ -95,7 +103,7 @@ class DocumentProcessor:
             str: Preprocessed text
         """
         # TODO: Implement text preprocessing
-        cleaned_text = text
+        cleaned_text = text.lower()
         # Your implementation here
         # Remove special characters but keep punctuation that's meaningful
         # Keep periods, commas, question marks, exclamation marks
