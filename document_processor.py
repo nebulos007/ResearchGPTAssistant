@@ -97,6 +97,22 @@ class DocumentProcessor:
         # TODO: Implement text preprocessing
         cleaned_text = text
         # Your implementation here
+        # Remove special characters but keep punctuation that's meaningful
+        # Keep periods, commas, question marks, exclamation marks
+        cleaned_text = re.sub(r'[^\w\s\.\,\?\!\-\:\;\(\)]', ' ', cleaned_text)
+        
+        # Normalize whitespace
+        cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
+        
+        # Remove extra periods (common in PDFs)
+        cleaned_text = re.sub(r'\.{2,}', '.', cleaned_text)
+        
+        # Clean up sentence spacing
+        cleaned_text = re.sub(r'\s*\.\s*', '. ', cleaned_text)
+        cleaned_text = re.sub(r'\s*\,\s*', ', ', cleaned_text)
+        
+        # Remove leading/trailing whitespace
+        cleaned_text = cleaned_text.strip()
         return cleaned_text
     
     def chunk_text(self, text, chunk_size=None, overlap=None):
