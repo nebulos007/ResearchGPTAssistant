@@ -55,9 +55,22 @@ class DocumentProcessor:
         Returns:
             str: Extracted and cleaned text
         """
+        
+        from PyPDF2 import PdfReader
+
+      
+        
+
         # TODO: Implement PDF text extraction
         extracted_text = ""
         # Your implementation here
+        try:
+            
+        with open(pdf_path = "data/sample_papers/example.pdf", 'rb') as file:
+            reader = PdfReader(file)
+            for page in reader.pages:
+                extracted_text += page.extract_text() + "\n"
+
         return extracted_text
     
     def preprocess_text(self, text):
