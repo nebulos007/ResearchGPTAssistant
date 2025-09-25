@@ -72,6 +72,10 @@ class DocumentProcessor:
         except Exception as e:
             print(f"Error extracting text from {pdf_path}: {e}")
             extracted_text = ""
+        extracted_text = re.sub(r'\n\s*\n', '\n\n', text)  # Multiple newlines to double newline
+        extracted_text = re.sub(r'\s+', ' ', text)         # Multiple spaces to single space
+        extracted_text = re.sub(r'\n\n+', '\n\n', text)   # Multiple paragraph breaks to double newline
+        
         return extracted_text
     
     def preprocess_text(self, text):
