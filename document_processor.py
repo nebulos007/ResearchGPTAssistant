@@ -385,9 +385,40 @@ class DocumentProcessor:
             list: List of (chunk_text, similarity_score, doc_id) tuples
         """
         # TODO: Implement similarity search
-        similar_chunks = []
+        # similar_chunks = []
         # Your implementation here
-        return similar_chunks
+        if self.document_vectors is None:
+            self.logger.error("Search index not built. Call build_search_index() first.")
+            return []
+        
+        if not query.strip():
+            self.logger.warning("Empty query provided.")
+            return []
+        
+        try:
+            # Transform query to TF-IDF vector
+            query_vec = self.vectorizer.transform([query.lower()])
+            
+            # Compute cosine similarity
+            similarities = cosine_similarity(query_vec, self.document_vectors).flatten()
+            
+            # Get top_k indices of most similar chunks
+            top_indices = np.argsort(similarities)[::-1][:top_k]
+
+            # Prepare results
+            similar_chunks = []
+            for idx in top_indices:
+                if similarities[idx] > 0:  # Only include if similarity is greater than 0
+                    chunk_text = self.all_chunks[idx]
+                    score = similarities[idx]
+                    doc_id = self.chunk_to_doc_mapping[idx]
+                    similar_chunks.append((chunk_text, score, doc_id))
+            self.logger.info(f"Found {len(similar_chunks)} similar chunks for query: '{query[:50]}...'")
+
+            return similar_chunks
+        except Exception as e:
+            self.logger.error(f"Error during similarity search: {str(e)}")
+            return []
     
     def get_document_stats(self):
         """
@@ -402,4 +433,31 @@ class DocumentProcessor:
         # TODO: Calculate and return document statistics
         stats = {}
         # Your implementation here
+
+        if not self.documents:
+            self.logger.warning("No documents processed.")
+            return {
+                'num_documents': 0,
+                'total_chunks': 0,
+                'average_doc_length': 0,
+                'document_titles': []
+            }
+        
+        total_chunks = sum(doc['num_chunks'] for doc in self.documents.values())
+        total_length = sum(doc['processed_text_length'] for doc in self.documents.values())
+        num_documents = len(self.documents)
+        average_length = total_length / num_documents if num_documents > 0 else 0
+        titles = [doc['title'] for doc in self.documents.values()]
+
+        stats = {
+            'num_documents': num_documents,
+            'total_chunks': total_chunks,
+            'average_doc_length': average_length,
+            'total_text_length': total_length,
+            'document_titles': titles,
+            'document_ids': list(self.documents.keys()),
+            'average_chunks_per_doc': total_chunks / num_documents if num_documents > 0 else 0,
+            'vocabulary_size': len(self.vectorizer.vocabulary_) if self.vectorizer and hasattr(self.vectorizer, 'vocabulary_') else 0
+        }
+
         return stats
