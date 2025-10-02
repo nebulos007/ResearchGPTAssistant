@@ -85,6 +85,49 @@ class DocumentProcessor:
         except Exception as e:
             print(f"Error extracting text from {'data/sample_papers'}: {str(e)}")
             return ""
+        # Basic cleaning of extracted text
+        cleaned_text = self.clean_pdf_text(extracted_text)
+        return cleaned_text
+    
+    def _clean_pdf_text(self, text):
+        """
+        Clean text extracted from PDF to fix common issues
+        
+        Args:
+            text (str): Raw PDF text
+            
+        Returns:
+            str: Cleaned text
+        """
+        if not text:
+            return ""
+        
+        # Remove excessive whitespace and normalize line breaks
+        text = re.sub(r'\n\s*\n', '\n\n', text)  # Multiple newlines to double newline
+        text = re.sub(r'\s+', ' ', text)         # Multiple spaces to single space
+        text = re.sub(r'\n\n+', '\n\n', text)   # Multiple paragraph breaks to double newline
+        
+        # Remove common PDF artifacts
+        text = re.sub(r'\x0c', '', text)         # Form feed characters
+        text = re.sub(r'â€™', "'", text)         # Fix apostrophes
+        text = re.sub(r'â€œ|â€\x9d', '"', text)  # Fix quotes
+        text = re.sub(r'â€"', '-', text)         # Fix dashes
+        
+        # Remove page numbers and headers/footers (basic heuristic)
+        lines = text.split('\n')
+        cleaned_lines = []
+        
+        for line in lines:
+            line = line.strip()
+            # Skip very short lines that might be page numbers or artifacts
+            if len(line) < 3:
+                continue
+            # Skip lines that are just numbers (likely page numbers)
+            if line.isdigit():
+                continue
+            cleaned_lines.append(line)
+        
+        return '\n'.join(cleaned_lines)
     
     def preprocess_text(self, text):
         """
