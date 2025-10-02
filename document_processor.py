@@ -512,4 +512,52 @@ class DocumentProcessor:
             self.logger.error(f"Error searching within document {doc_id}: {str(e)}")
             return []
         
+    def save_processed_documents(self, output_dir):
+        """
+        Save processed document data to files
+        
+        Args:
+            output_dir (str): Directory to save processed data
+        """
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        
+        try:
+            # Save document metadata
+            metadata_file = os.path.join(output_dir, 'document_metadata.json')
+            import json
+            
+            # Prepare serializable metadata
+            serializable_docs = {}
+            for doc_id, doc_data in self.documents.items():
+                serializable_docs[doc_id] = {
+                    'title': doc_data['title'],
+                    'metadata': doc_data['metadata'],
+                    'file_path': doc_data['file_path'],
+                    'num_chunks': doc_data['num_chunks'],
+                    'raw_text_length': doc_data['raw_text_length'],
+                    'processed_text_length': doc_data['processed_text_length']
+                }
+            
+            with open(metadata_file, 'w') as f:
+                json.dump(serializable_docs, f, indent=2)
+            
+            # Save document statistics
+            stats_file = os.path.join(output_dir, 'document_stats.json')
+            with open(stats_file, 'w') as f:
+                json.dump(self.get_document_stats(), f, indent=2)
+            
+            # Save chunks for each document
+            for doc_id, doc_data in self.documents.items():
+                chunks_file = os.path.join(output_dir, f'{doc_id}_chunks.txt')
+                with open(chunks_file, 'w', encoding='utf-8') as f:
+                    for i, chunk in enumerate(doc_data['chunks']):
+                        f.write(f"--- Chunk {i+1} ---\n")
+                        f.write(chunk)
+                        f.write("\n\n")
+            
+            self.logger.info(f"Saved processed documents to {output_dir}")
+            
+        except Exception as e:
+            self.logger.error(f"Error saving processed documents: {str(e)}")
     
