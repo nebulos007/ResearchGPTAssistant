@@ -17,7 +17,7 @@ class Config:
         load_dotenv()
         
         # TODO: Mistral API settings
-        self.MISTRAL_API_KEY = "dTZ6xiVTSuI69efnTgvgcNcdYiFL2xu1"  # Replace with actual key
+        self.MISTRAL_API_KEY = ""  # Replace with actual key
         self.MODEL_NAME = "mistral-medium"  # TODO: Choose appropriate Mistral model
         self.TEMPERATURE = 0.1  # TODO: Set temperature for consistent responses
         self.MAX_TOKENS = 1000  # TODO: Set maximum response length

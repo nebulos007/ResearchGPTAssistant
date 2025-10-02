@@ -461,3 +461,55 @@ class DocumentProcessor:
         }
 
         return stats
+
+    def search_within_document(self, doc_id, query, top_k=3):
+        """
+        Search for similar chunks within a specific document
+        
+        Args:
+            doc_id (str): Document identifier
+            query (str): Search query
+            top_k (int): Number of chunks to return
+            
+        Returns:
+            list: List of (chunk_text, similarity_score) tuples
+        """
+        if doc_id not in self.documents:
+            self.logger.error(f"Document {doc_id} not found")
+            return []
+        
+        doc_chunks = self.documents[doc_id]['chunks']
+        
+        if not doc_chunks:
+            return []
+        
+        try:
+            # Create temporary vectorizer for this document
+            temp_vectorizer = TfidfVectorizer(
+                stop_words='english',
+                ngram_range=(1, 2),
+                lowercase=True
+            )
+            
+            # Vectorize document chunks and query
+            chunk_vectors = temp_vectorizer.fit_transform(doc_chunks)
+            query_vector = temp_vectorizer.transform([query.lower()])
+            
+            # Calculate similarities
+            similarities = cosine_similarity(query_vector, chunk_vectors).flatten()
+            
+            # Get top results
+            top_indices = np.argsort(similarities)[::-1][:top_k]
+            
+            results = []
+            for idx in top_indices:
+                if similarities[idx] > 0:
+                    results.append((doc_chunks[idx], similarities[idx]))
+            
+            return results
+            
+        except Exception as e:
+            self.logger.error(f"Error searching within document {doc_id}: {str(e)}")
+            return []
+        
+    
