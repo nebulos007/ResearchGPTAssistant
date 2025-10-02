@@ -560,4 +560,42 @@ class DocumentProcessor:
             
         except Exception as e:
             self.logger.error(f"Error saving processed documents: {str(e)}")
+
+# Example usage:
+if __name__ == "__main__":
+    # This section is for demonstration and testing purposes
+    from config import Config
+    import logging
+    logging.basicConfig(level=logging.INFO)
+
+    # Initialize configuration and document processor
+    config = Config()
+    processor = DocumentProcessor(config)
+
+    # Test with sample directory of PDFs
+    sample_dir = "data/sample_papers"
+    if os.path.exists(sample_dir):
+        pdf_files = [f for f in os.listdir(sample_dir) if f.endswith('.pdf')]
+                     
+        # Process each PDF
+        for pdf_file in pdf_files:
+            pdf_path = os.path.join(sample_dir, pdf_file)
+            doc_id = processor.process_document(pdf_path)
+            print(f"Processed document ID: {doc_id}")
+
+        # Build search index
+        processor.build_search_index()
+
+        # Test search
+        results = processor.find_similar_chunks("machine learning algorithms", top_k=3)
+        for chunk, score, doc_id in results:
+            print(f"Doc: {doc_id}, Score: {score:.3f}, Chunk: {chunk[:100]}...\n")
+
+        # Print document stats
+        stats = processor.get_document_stats()
+        print("Document Statistics:")
+        for key, value in stats.items():
+            print(f"  {key}: {value}")
+    else:
+        print(f"Sample directory {sample_dir} does not exist. Please add sample PDFs to test.")
     
