@@ -149,6 +149,37 @@ class DocumentProcessor:
         # TODO: Implement chunking logic
         chunks = []
         # Your implementation here
+        if not text or len(text) < chunk_size:
+            return [text] if text else []
+
+        start = 0
+        while start < len(text):
+            end = start + chunk_size
+            chunks.append(text[start:end])
+            # Calculate end position
+            end = start + chunk_size
+            # If this is not the last chunk, try to end at a sentence boundary
+            if end < len(text):
+                #Look for sentence ending in the last 200 characters of the chunk
+                sentence_end_pattern = r'[.!?]\s+'
+                search_start = max(end - 200, start)
+                #Find sentence boundaries in the search range
+                matches = list(re.finditer(sentence_end_pattern, text[search_start:end]))
+                if matches:
+                    #Use the last match to determine the end of the chunk
+                    last_match = matches[-1]
+                    end = search_start + last_match.end()
+            # Extract the chunk
+            chunk = text[start:end].strip()
+            if chunk:
+                chunks.append(chunk)
+            # Move to the next chunk
+            start = end - overlap
+            # Ensure we don't get stuck in a loop
+            if start <= 0 or start >= len(text):
+                break
+            
+        self.logger.info(f"Successfully chunked text into {len(chunks)} chunks from text of length {len(text)}")
         return chunks
     
     def process_document(self, pdf_path):
