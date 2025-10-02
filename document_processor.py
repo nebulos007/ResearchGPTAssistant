@@ -300,6 +300,35 @@ class DocumentProcessor:
         # TODO: Build TF-IDF index
         all_chunks = []
         # Your implementation here
+        if not self.documents:
+            self.logger.warning("No documents to index.")
+            return
+        
+        self.logger.info("Building search index from document chunks...")
+
+        # Collect all chunks and map to document IDs
+        self.all_chunks = []
+        self.chunk_to_doc_mapping = []
+        
+        for doc_id, doc_data in self.documents.items():
+            for chunk in doc_data['chunks']:
+                self.all_chunks.append(chunk)
+                self.chunk_to_doc_mapping.append(doc_id)
+        if not self.all_chunks:
+            self.logger.warning("No chunks found in documents.")
+            return
+        
+        try:
+            # Fit TF-IDF vectorizer
+            self.document_vectors = self.vectorizer.fit_transform(self.all_chunks)
+                
+            self.logger.info(f"Successfully built search index.")
+            self.logger.info(f"  - Total chunks indexed: {len(self.all_chunks)}")
+            self.logger.info(f"  - Vocabulary size: {len(self.vectorizer.vocabulary_)}")
+            self.logger.info(f"  - TF-IDF vector shape: {self.document_vectors.shape}")
+
+        except Exception as e:
+                self.logger.error(f"Error building search index: {e}")    
         
     def find_similar_chunks(self, query, top_k=5):
         """
