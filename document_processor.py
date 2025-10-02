@@ -287,6 +287,44 @@ class DocumentProcessor:
             self.logger.error(f"Error processing document {pdf_path}: {e}")
         return doc_id
     
+    def _extract_metadata(self, text, pdf_path):
+        """
+        Extract basic metadata from text or PDF file
+
+        Args:
+            text (str): Extracted text from PDF
+            pdf_path (str): Path to PDF file
+
+        Returns:
+            dict: Metadata dictionary
+        """
+        metadata = {
+            'file_path': pdf_path,
+            'file_size': os.path.getsize(pdf_path) if os.path.exists(pdf_path) else 0,
+            'text_length': len(text)
+        }
+
+        # Attempt to extract title from first meaningful line
+        lines = text.split('\n')
+        title = None
+
+        for line in lines[:10]:  # Look at first 10 lines
+            line = line.strip()
+            if len(line) > 10 and len(line) < 200:  # Reasonable title length
+                # Skip lines that look like headers or page numbers
+                if not re.match(r'^[\d\s\.\-]+$', line):
+                    title = line
+                    break
+                
+        metadata['title'] = title if title else os.path.basename(pdf_path).replace('.pdf', '')
+
+        # Extract some basic text statistics
+        words = text.split()
+        metadata['word_count'] = len(words)
+        metadata['estimated_pages'] = len(words) // 250  # Rough estimate: 250 words per page
+
+        return metadata
+
     def build_search_index(self):
         """
         Build TF-IDF search index for all documents
