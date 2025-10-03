@@ -23,8 +23,8 @@ class Config:
         self.MAX_TOKENS = 1000  # TODO: Set maximum response length
         
         # TODO: Directory paths
-        self.DATA_DIR = "data/"
-        self.SAMPLE_PAPERS_DIR = "data/sample_papers/"
+        self.DATA_DIR = "/Users/carlos.stanton/Documents/Projects/AI/Adv class/research_gpt_assistant/data/"
+        self.SAMPLE_PAPERS_DIR = "/Users/carlos.stanton/Documents/Projects/AI/Adv class/research_gpt_assistant/data/sample_papers/"
         self.PROCESSED_DIR = "data/processed/"
         self.RESULTS_DIR = "results/"
         

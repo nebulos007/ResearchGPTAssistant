@@ -63,7 +63,8 @@ class DocumentProcessor:
         # Your implementation here
         try:
             # Open PDF file in binary mode
-            with open('data/sample_papers', 'rb') as file:
+            with open(pdf_path, 'rb') as file:
+                print(f"Extracting text from {pdf_path}...")
                 # Create PDF reader object
                 reader = PyPDF2.PdfReader(file)
                 
@@ -246,6 +247,8 @@ class DocumentProcessor:
         # TODO: Implement complete document processing pipeline
      
         # Your implementation here
+        import logging
+        self.logger = logging.getLogger('DocumentProcessor')
         # Generate document ID from filename
         doc_id = os.path.basename(pdf_path).replace('.pdf', '')
         
@@ -573,13 +576,14 @@ if __name__ == "__main__":
     processor = DocumentProcessor(config)
 
     # Test with sample directory of PDFs
-    sample_dir = "data/sample_papers"
+    sample_dir = "/Users/carlos.stanton/Documents/Projects/AI/Adv class/research_gpt_assistant/data/sample_papers/"
     if os.path.exists(sample_dir):
         pdf_files = [f for f in os.listdir(sample_dir) if f.endswith('.pdf')]
-                     
+        print(f"Found {len(pdf_files)} PDF files in {sample_dir}")         
         # Process each PDF
         for pdf_file in pdf_files:
             pdf_path = os.path.join(sample_dir, pdf_file)
+            print(f"Processing {pdf_path}...")
             doc_id = processor.process_document(pdf_path)
             print(f"Processed document ID: {doc_id}")
 
