@@ -8,8 +8,7 @@ TODO: Implement the following functionality:
 4. Answer generation and verification
 """
 
-from mistralai.client import MistralClient
-from mistralai.models.chat_completion import ChatMessage
+from mistralai import Mistral
 import json
 import time
 import logging
@@ -30,14 +29,24 @@ class ResearchGPTAssistant:
         self.config = config
         self.doc_processor = document_processor
         
-        # TODO: Initialize Mistral client
-        self.mistral_client = None  # Initialize MistralClient here
+        # Initialize Mistral client
+        self.mistral_client = Mistral(api_key=self.config.MISTRAL_API_KEY)  # Initialize MistralClient here
         
-        # TODO: Initialize conversation tracking
+        # Initialize conversation tracking
         self.conversation_history = []
-        
-        # TODO: Load prompt templates
+
+        # Set up logging
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
+
+        # Track API usage
+        self.api_call_count = 0
+        self.total_tokens_used = 0
+
+        # Load prompt templates
         self.prompts = self._load_prompt_templates()
+
+        self.logger.info("ResearchGPT Assistant initialized.")
     
     def _load_prompt_templates(self):
         """
@@ -218,8 +227,77 @@ Provide a brief explanation of your decision.
         """
         if temperature is None:
             temperature = self.config.TEMPERATURE
+        max_tokens = self.config.MAX_TOKENS
             
-        # TODO: Implement Mistral API call
+        # Prepare messages for Mistral
+        messages = [{"role": "user", "content": prompt}]
+        
+        try:
+            # Make the API call using CORRECTED method
+            start_time = time.time()
+
+            # FIXED: Use the correct method to call Mistral
+            chat_response = self.mistral_client.chat.complete(
+                model=self.config.MODEL_NAME,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
+
+            # Track API usage
+            self.api_call_count += 1
+            api_time = time.time() - start_time
+
+            # Extract response text
+            response_text = chat_response.choices[0].message.content
+
+            # Update token usage if available
+            if hasattr(chat_response, 'usage') and chat_response.usage:
+                if hasattr(chat_response.usage, 'total_tokens'):
+                    self.total_tokens_used += chat_response.usage.total_tokens
+                elif hasattr(chat_response.usage, 'prompt_tokens') and hasattr(chat_response.usage, 'completion_tokens'):
+                    self.total_tokens_used += chat_response.usage.prompt_tokens + chat_response.usage.completion_tokens
+            
+            # Log API call details
+            self.logger.info(f"Mistral API call successful (took {api_time:.2f}s)")
+            self.logger.debug(f"Prompt length: {len(prompt)} characters")
+            self.logger.debug(f"Response length: {len(response_text)} characters")
+
+            return response_text
+        
+        except AttributeError as e:
+            # Handle specific API structure issues
+            self.logger.error(f"Mistral API structure error: {str(e)}")
+            self.logger.error("Attempting alternative API call method.")
+        
+            try:
+                # Alternative API call method
+                chat_response = self.mistral_client.chat(
+                    model=self.config.MODEL_NAME,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens
+                )
+
+                response_text = chat_response.choices[0].message.content
+                self.api_call_count += 1
+                self.logger.info("Mistral API call successful using alternative method.")
+                return response_text
+        
+            except Exception as e2:
+                self.logger.error(f"Error calling Mistral API with alternative method: {str(e2)}")
+                return f"Error calling Mistral API: {str(e2)}"
+        
+        except Exception as e:
+            self.logger.error(f"Error calling Mistral API: {str(e)}")
+            # Provide a more helpful error message
+            if "authentication" in str(e).lower() or "unauthorized" in str(e).lower():
+                return "API Error: Authentication failed. Please check your Mistral API key in config.py."
+            elif "model" in str(e).lower():
+                return "API Error: Model not found. Please verify your model name"
+            else:
+                return f"API Error: {str(e)}. Please check your Mistral API configuration."
+        '''
         try:
             response = ""  # Make actual API call here
             # Your implementation here
@@ -227,7 +305,7 @@ Provide a brief explanation of your decision.
         except Exception as e:
             # TODO: Handle API errors
             return f"Error calling Mistral API: {str(e)}"
-    
+        '''
     def chain_of_thought_reasoning(self, query, context_chunks):
         """
         Use Chain-of-Thought prompting for complex reasoning

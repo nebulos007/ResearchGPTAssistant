@@ -564,6 +564,7 @@ class DocumentProcessor:
         except Exception as e:
             self.logger.error(f"Error saving processed documents: {str(e)}")
 
+'''
 # Example usage:
 if __name__ == "__main__":
     # This section is for demonstration and testing purposes
@@ -602,4 +603,4 @@ if __name__ == "__main__":
             print(f"  {key}: {value}")
     else:
         print(f"Sample directory {sample_dir} does not exist. Please add sample PDFs to test.")
-    
+'''    
