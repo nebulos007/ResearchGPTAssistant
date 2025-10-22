@@ -12,6 +12,9 @@ from mistralai.client import MistralClient
 from mistralai.models.chat_completion import ChatMessage
 import json
 import time
+import logging
+import re
+from typing import List, Dict, Any, Tuple, Optional
 
 class ResearchGPTAssistant:
     def __init__(self, config, document_processor):
@@ -38,48 +41,160 @@ class ResearchGPTAssistant:
     
     def _load_prompt_templates(self):
         """
-        Load prompt templates for different tasks
+        Load comprehensive prompt templates for different research tasks
         
-        TODO: Define prompt templates for:
-        1. Chain-of-Thought reasoning
-        2. Self-consistency prompting
-        3. ReAct prompting for research workflow
-        4. Document summarization
-        5. Question answering
-        6. Answer verification
+        Returns:
+            dict: Dictionary of prompt templates
         """
         prompts = {
             'chain_of_thought': """
-            # TODO: Create Chain-of-Thought prompt template
-            # Should guide the model to think step by step
-            # Include: "Let's think about this step by step..."
+You are a research assistant helping to analyze academic papers. Think through this step by step.
+
+Research Question: {query}
+
+Context from Research Papers:
+{context}
+
+Let's approach this systematically:
+
+1. First, let me understand what the question is asking:
+   [Analyze the question and identify key components]
+
+2. Next, let me examine the relevant information from the papers:
+   [Review and summarize key points from the context]
+
+3. Now, let me reason through the answer step by step:
+   [Provide detailed reasoning for each aspect]
+
+4. Finally, let me synthesize a comprehensive answer:
+   [Combine insights into a coherent response]
+
+Please provide a thorough, step-by-step analysis that clearly shows your reasoning process.
             """,
             
             'self_consistency': """
-            # TODO: Create Self-Consistency prompt template
-            # Should ask for multiple reasoning paths
-            # Include instructions for generating diverse approaches
+You are a research assistant analyzing academic papers. I want you to approach this question from a different angle than previous attempts.
+
+Research Question: {query}
+
+Context from Research Papers:
+{context}
+
+Consider this question carefully and provide your analysis. Focus on:
+- Different aspects or perspectives not covered in other responses
+- Alternative interpretations of the available evidence
+- Unique insights from the research papers
+- Any limitations or gaps in the current understanding
+
+Provide a comprehensive answer that offers a fresh perspective while remaining grounded in the evidence.
             """,
             
             'react_research': """
-            # TODO: Create ReAct prompt template for research
-            # Include: Thought, Action, Observation cycle
-            # Actions: Search, Analyze, Summarize, Conclude
+You are conducting a research analysis using a structured approach. Follow this format:
+
+Research Topic: {query}
+
+Available Information: {context}
+
+Use this structured thinking process:
+
+Thought: [What do I need to understand or find out next?]
+Action: [What should I do - analyze, search for specific info, compare, etc.]
+Observation: [What did I learn from that action?]
+
+Repeat this process until you have sufficient information to answer the question comprehensively.
+
+End with a final summary of your findings.
             """,
             
             'document_summary': """
-            # TODO: Create document summarization prompt
-            # Should extract key findings, methodology, conclusions
+You are an expert research assistant. Please provide a comprehensive summary of this document.
+
+Document Content: {content}
+
+Your summary should include:
+
+1. **Main Research Question/Objective**: What is the paper trying to achieve?
+
+2. **Methodology**: How did the researchers approach the problem?
+
+3. **Key Findings**: What are the most important results or discoveries?
+
+4. **Conclusions**: What do the authors conclude from their work?
+
+5. **Limitations**: What limitations does the study have?
+
+6. **Significance**: Why is this research important?
+
+Please structure your response clearly and focus on the most important aspects.
             """,
             
             'qa_with_context': """
-            # TODO: Create QA prompt with document context
-            # Should answer based on provided research papers
+You are a knowledgeable research assistant with access to academic papers. Answer the following question based on the provided context.
+
+Question: {query}
+
+Relevant Context from Research Papers:
+{context}
+
+Guidelines for your response:
+- Base your answer primarily on the provided context
+- If the context doesn't fully address the question, acknowledge this
+- Cite specific findings or claims when possible
+- Be precise and avoid speculation beyond what the papers support
+- If there are conflicting viewpoints in the papers, mention them
+
+Please provide a comprehensive, evidence-based answer.
             """,
             
             'verify_answer': """
-            # TODO: Create answer verification prompt
-            # Should check answer quality and accuracy
+You are a research quality assessor. Please evaluate the following answer for accuracy and completeness.
+
+Original Question: {query}
+
+Generated Answer: {answer}
+
+Supporting Context: {context}
+
+Please assess:
+
+1. **Accuracy**: Is the answer factually correct based on the context?
+2. **Completeness**: Does it address all aspects of the question?
+3. **Evidence Support**: Is the answer well-supported by the provided context?
+4. **Clarity**: Is the answer clear and well-structured?
+5. **Limitations**: Are there any gaps or limitations in the answer?
+
+Based on your assessment, provide:
+- A verification score (1-10)
+- Specific areas for improvement
+- An improved version of the answer if needed
+
+Focus on making the answer as accurate and helpful as possible.
+            """,
+            
+            'basic_qa': """
+You are a helpful research assistant. Please answer the following question based on the provided context from academic papers.
+
+Question: {query}
+
+Context: {context}
+
+Please provide a clear, concise answer based on the information available.
+            """,
+            
+            'workflow_conclusion': """
+Based on the research workflow conducted, do we have sufficient information to provide a comprehensive answer?
+
+Research Question: {query}
+Information Gathered: {observation}
+
+Consider:
+- Is the core question addressed?
+- Are there major gaps in understanding?
+- Would additional research significantly improve the answer?
+
+Respond with: YES (sufficient) or NO (need more research)
+Provide a brief explanation of your decision.
             """
         }
         return prompts
