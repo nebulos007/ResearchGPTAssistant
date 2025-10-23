@@ -297,16 +297,8 @@ Provide a brief explanation of your decision.
                 return "API Error: Model not found. Please verify your model name"
             else:
                 return f"API Error: {str(e)}. Please check your Mistral API configuration."
-        '''
-        try:
-            response = ""  # Make actual API call here
-            # Your implementation here
-            return response
-        except Exception as e:
-            # TODO: Handle API errors
-            return f"Error calling Mistral API: {str(e)}"
-        '''
-    def chain_of_thought_reasoning(self, query, context_chunks):
+
+    def chain_of_thought_reasoning(self, query: str, context_chunks: List[Tuple]) -> str:
         """
         Use Chain-of-Thought prompting for complex reasoning
         
@@ -318,17 +310,28 @@ Provide a brief explanation of your decision.
         
         Args:
             query (str): Research question
-            context_chunks (list): Relevant document chunks
+            context_chunks (list): Relevant document chunks as (text, score, doc_id tuples)
             
         Returns:
             str: Chain-of-thought response
         """
-        # TODO: Build CoT prompt
-        cot_prompt = self.prompts['chain_of_thought']
-        # Add query and context
-        # Your implementation here
+        # Build context string from chunks
+        context = self._build_context_from_chunks(context_chunks)
+
+        # Build CoT prompt
+        cot_prompt = self.prompts['chain_of_thought'].format(query=query, context=context)
         
-        response = self._call_mistral(cot_prompt)
+        # Call Mistral with CoT prompt
+        response = self._call_mistral(cot_prompt, temperature=self.config.COT_TEMPERATURE)
+        
+        # Add to conversation history
+        self.conversation_history.append({
+            'type': 'chain_of_thought',
+            'query': query,
+            'response': response,
+            'timestamp': time.time()
+        })
+
         return response
     
     def self_consistency_generate(self, query, context_chunks, num_attempts=3):
@@ -349,17 +352,36 @@ Provide a brief explanation of your decision.
         Returns:
             str: Most consistent response
         """
+        self.logger.info(f"Generating {num_attempts} responses for self-consistency check.")
+
         responses = []
-        
-        # TODO: Generate multiple responses
+        context = self._build_context_from_chunks(context_chunks)
+
+        # Generate multiple responses
         for i in range(num_attempts):
             # Generate response with slight temperature variation
-            response = ""  # Your implementation here
+            temp_variation = self.config.TEMPERATURE + (i * 0.1)
+            temp_variation = min(temp_variation, 1.0)  # Cap temperature at 1.0
+
+            prompt = self.prompts['self_consistency'].format(query=query, context=context)
+
+            response = self._call_mistral(prompt, temperature=temp_variation)  # Your implementation here
             responses.append(response)
+
+            self.logger.debug(f"Generated response {i+1}/{num_attempts}")
         
-        # TODO: Implement consistency checking and selection
-        best_response = responses[0]  # Implement actual selection logic
+        # Implement consistency checking and selection
+        best_response = self._select_most_consistent_response(responses, query, context)  # Implement actual selection logic
         
+        # Add to conversation history
+        self.conversation_history.append({
+            'type': 'self_consistency',
+            'query': query,
+            'all_responses': responses,
+            'selected_response': best_response,
+            'timestamp': time.time()
+        })
+
         return best_response
     
     def react_research_workflow(self, query):
