@@ -529,17 +529,89 @@ Provide a brief explanation of your decision.
         })
         return workflow_result
     
-    def _should_conclude_workflow(self, observation):
+    def _execute_react_action(self, action: str, query: str, context: str, previous_steps: List[Dict]) -> str:
         """
-        Determine if ReAct workflow has sufficient information
+        Execute a specific action in the ReAct workflow
+
+        Args:
+            action (str): Action to execute
+            query (str): Research question
+            context (str): Available context
+            previous_steps (list): Previous workflow steps
+
+        Returns:
+            str: Observation from executing the action
+        """
+        action_upper = action.upper()
+
+        if "SEARCH" in action_upper:
+            # Search for more specific information
+            search_terms = self._extract_search_terms_from_action(action)
+            if search_terms:
+                new_chunks = self.doc_processor.find_similar_chunks(search_terms, top_k=3)
+                observation = f"Found additional information: {self._build_context_from_chunks(new_chunks)}"
+            else:
+                observation = "Searched existing documents but no new relevant information found."
         
-        TODO: Implement workflow conclusion logic:
-        1. Check if observation contains sufficient information
-        2. Use simple heuristics or ask Mistral to decide
-        3. Return boolean decision
+        elif "ANALYZE" in action_upper:
+            # Analyze existing context
+            analysis_prompt = f"""
+            Analyze the following information in the context of the research question: {query}
+            
+            Information to analyze: {context[:1500]}
+            Provide key insights and patterns you observe.
+            """
+            observation = self._call_mistral(analysis_prompt, temperature=0.4)
+
+        elif "COMPARE" in action_upper:
+            # Compare different findings
+            compare_prompt = f"""
+            Compare different approaches, methods, or findings related to: {query}
+
+            Available Information: {context[:1500]}
+
+            Highlight similarities, differences, and relative strengths or weaknesses.
+            """
+            observation = self._call_mistral(compare_prompt, temperature=0.4)
+
+        elif "SYNTHESIZE" in action_upper:
+            # Synthesize information
+            synthesize_prompt = f"""
+            Synthesize the gathered information to form coherent conclusions about: {query}
+
+            Previous steps: {json.dumps(previous_steps, indent=2)}
+            Context: {context[:1000]}
+
+            Provide integrated insights that combine multiple pieces of information.
+            """
+            observation = self._call_mistral(synthesize_prompt, temperature=0.3)
+
+        else:
+            # Default observation
+            observation = f"Executed action: {action}. Continuing analysis of available information."
+        
+        return observation
+    
+    def _extract_search_terms_from_action(self, action: str) -> str:
         """
-        # TODO: Implement conclusion decision logic
-        return False
+        Extract search terms from the action description
+
+        Args:
+            action (str): Action description
+        Returns:
+            str: Extracted search terms
+        """
+        # Simple extraction - look for quoted terms or keywords after "Search for"
+        if "search for" in action.lower():
+            parts = action.lower().split("search for")
+            if len(parts) > 1:
+                return parts[1].strip().strip('"\'')
+            
+        return ""
+    
+    def _should_conclude_workflow(self, observation):
+        
+
     
     def verify_and_edit_answer(self, answer, original_query, context):
         """
