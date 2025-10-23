@@ -989,7 +989,9 @@ if __name__ == "__main__":
 
             # Get document stats
             stats = doc_processor.get_document_stats()
-            print(f"Documents loaded: {stats['total_documents']}, Total chunks: {stats['total_chunks']}")
+            total_docs = stats.get('total_documents', 0)
+            total_chunks = stats.get('total_chunks', 0)
+            print(f"Documents loaded: {total_docs}, Total chunks: {total_chunks}")
 
             # Now documents are loaded, we can test the research assistant
             print("\n" + "-"*50)
