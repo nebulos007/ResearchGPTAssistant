@@ -674,20 +674,31 @@ Provide a brief explanation of your decision.
         Returns:
             dict: Verification results and improved answer
         """
-        # TODO: Build verification prompt
-        verify_prompt = self.prompts['verify_answer']
-        # Add answer, query, and context
-        
-        verification_result = self._call_mistral(verify_prompt)
-        
-        # TODO: Parse verification and generate improvements
+        self.logger.info("Starting answer verification process.")
+
+        # Build verification prompt
+        verification_prompt = self.prompts['verify_answer'].format(
+            query=original_query,
+            answer=answer,
+            context=context[:2000]  # Limit context length
+        )
+
+        verification_result = self._call_mistral(verification_prompt, temperature=0.2)
+
+        # Parse verification result and extract improved answer
+        improved_answer = self._extract_improved_answer(verification_result, answer)
+        confidence_score = self._extract_confidence_score(verification_result)
+
         verification_data = {
             'original_answer': answer,
             'verification_result': verification_result,
-            'improved_answer': answer,  # TODO: Generate improved version
-            'confidence_score': 0.8     # TODO: Calculate confidence
+            'improved_answer': improved_answer,
+            'confidence_score': confidence_score,
+            'verification_timestamp': time.time()
         }
-        
+
+        self.logger.info("Answer verification process completed with confidence score: {confidence_score}")
+
         return verification_data
     
     def answer_research_question(self, query, use_cot=True, use_verification=True):
