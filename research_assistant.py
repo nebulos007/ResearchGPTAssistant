@@ -735,6 +735,49 @@ Provide a brief explanation of your decision.
             
         return original_answer
 
+    def _extract_confidence_score(self, verification_result: str) -> Optional[float]:
+        """
+        Extract confidence score from verification result
+
+        Args:
+            verification_result (str): Full verification output
+        
+        Returns:
+            float: Confidence score between 0 and 1
+        """
+        # Look for numerical scores in the verification result
+        import re
+
+        # Look for patterns like "score: 8/10" or "8 out of 10"
+        score_patterns = [
+            r'score[:\s]+(\d+)(?:/10|\s*out\s*of\s*10)',
+            r'(\d+)(?:/10|\s*out\s*of\s*10)'
+            r'(\d+)\.(\d+)(?:/10|\s*out\s*of\s*10)'
+        ]
+
+        for pattern in score_patterns:
+            match = re.findall(pattern, verification_result.lower())
+            if match:
+                try:
+                    if isinstance(match[0], tuple):
+                        score = float(match[0][0] + '.' + match[0][1])
+                    else:
+                        score = float(match[0])
+                    return min(score / 10.0, 1.0) # Normalize to 0-1
+                except ValueError:
+                    continue
+
+        # Default confidence based on presence of positive keywords
+        positive_indicators = ['accurate', 'comprehensive', 'well-supported', 'clear']
+        negative_indicators = ['inaccurate', 'incomplete', 'unsupported', 'unclear']
+
+        positive_count = sum(1 for word in positive_indicators if word in verification_result.lower())
+        negative_count = sum(1 for word in negative_indicators if word in verification_result.lower())
+
+        # Heuristic confidence score
+        confidence = 0.7 + (0.1 * positive_count) - (0.15 * negative_count)
+        return max(0.0, min(confidence, 1.0))
+
     def answer_research_question(self, query, use_cot=True, use_verification=True):
         """
         Main method to answer research questions
