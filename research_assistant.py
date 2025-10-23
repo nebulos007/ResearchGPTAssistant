@@ -948,4 +948,79 @@ Provide a brief explanation of your decision.
         self.logger.info("Conversation history cleared.")
 
 
+# Example usage and testing
+if __name__ == "__main__":
+    # This section can be used for quick testing of the ResearchAssistant class
+    from config import Config
+    from document_processor import DocumentProcessor
+    import os
 
+    #Initialize components
+    config = Config()
+    doc_processor = DocumentProcessor(config)
+
+    # Test if Mistral client can be initialized
+    try:
+        assistant = ResearchGPTAssistant(config, doc_processor)
+        print("ResearchGPTAssistant initialized successfully.")
+        print(f"API Usage Stats: {assistant.get_api_usage_stats()}")
+    except Exception as e:
+        print(f"Error initializing ResearchGPTAssistant: {str(e)}")
+        print("Please ensure your Mistral API key is set correctly in config.py.")
+        exit(1)
+
+    # Check if sample documents are available and load them
+    sample_dir = "data/sample_papers"
+    if os.path.exists(sample_dir):
+        pdf_files = [f for f in os.listdir(sample_dir) if f.endswith('.pdf')]
+
+        if pdf_files:
+            print(f"Found {len(pdf_files)} sample PDF files for testing. Processing...")
+
+            # Process documents (this "loads" them into the document processor)
+            for pdf_file in pdf_files[:3]: # Limit to first 3 for quick testing
+                pdf_path = os.path.join(sample_dir, pdf_file)
+                doc_id = doc_processor.process_document(pdf_path)
+                print(f"Processed document {pdf_file} with ID: {doc_id}")
+
+            # Build search index (required for similarity search)
+            print("\nBuilding search index...")
+            doc_processor.build_search_index()
+
+            # Get document stats
+            stats = doc_processor.get_document_stats()
+            print(f"Documents loaded: {stats['total_documents']}, Total chunks: {stats['total_chunks']}")
+
+            # Now documents are loaded, we can test the research assistant
+            print("\n" + "-"*50)
+            print("Testing ResearchGPTAssistant with a sample research question...")
+            print("-"*50)
+
+            #Test different strategies
+            test_queries = [
+                "What are the main contributions of this research?",
+                "What methodology was used in the study?",
+                "What are the limitations mentioned?",
+                "How does this work compare to previous approachest?"
+            ]
+
+            for query in test_queries:
+                print(f"\nQuery: {query}")
+                print("-" * 40)
+
+                try:
+                    # Test basic answer
+                    response = assistant.answer_research_question(query, use_cot=True, use_verification=False, strategy="cot")
+
+                    print(f"Answer: {response['answer']}...")
+                    print(f"Sources used: {response['sources_used']}")
+                    print(f"Strategy: {response['strategy_data']}")
+                    print(f"Time taken: {response['time_taken']:.2f} seconds")
+
+                except Exception as e:
+                    print(f"Error processing query '{query}': {str(e)}")
+
+                # Test different strategies on one query
+                print(f"\n" + "="*50)
+                print(f"Testing different strategies for query: {query}")
+                print("="*50)
