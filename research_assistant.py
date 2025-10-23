@@ -886,3 +886,35 @@ Provide a brief explanation of your decision.
         return response
         
     def _select_best_strategy(self, query: str, context_chunks: List[Tuple]) -> str:
+        """
+        Select the best strategy based on query complexity and context
+        
+        Args:
+            query (str): Research question
+            context_chunks (list): Relevant document chunks
+            
+        Returns:
+            str: Selected strategy ("cot", "self_consistency", "react", "basic")
+        """
+        # Analyze query complexity
+        query_lower = query.lower()
+
+        # Complex analytical questions -> ReAct
+        if any(word in query_lower for word in ['analyze', 'compare', 'assess', 'evaluate', 'contrast']):
+            return "react"
+        
+        # Questions requiring multiple perspectives -> Self-Consistency
+        if any(word in query_lower for word in ['different, various, multiple, perspectives, viewpoints']):
+            return "self_consistency"
+        
+        # Complex reasoning questions -> CoT
+        if any(word in query_lower for word in ['explain', 'why', 'how', 'reasoning', 'because']):
+            return "cot"
+        
+        # Simple factual questions -> Basic QA
+        if any(word in query_lower for word in ['what is', 'define', 'who is', 'when', 'where']):
+            return "basic"
+        
+        # Default to CoT for general cases
+        return "cot"
+            
