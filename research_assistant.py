@@ -384,6 +384,60 @@ Provide a brief explanation of your decision.
 
         return best_response
     
+    def _select_most_consistent_response(self, responses: List[str], query: str, context: str) -> str:
+        """
+        Select the most consistent response from multiple attempts
+
+        Args:
+            responses (list): List of generated responses
+            query (str): Research question
+            context (str): Relevant context
+
+        Returns:
+            str: Most consistent response
+        """
+        if len(responses) == 1:
+            return responses[0]
+        
+        # Filter out error responses
+        valid_responses = [resp for resp in responses if not resp.startswith("API Error:")]
+
+        if not valid_responses:
+            return responses[0]  # Return first response if all are errors
+        
+        if len(valid_responses) == 1:
+            return valid_responses[0]
+        
+        # Simple heuristic: select the response with median length and most context references
+        scored_responses = []
+
+        for resp in valid_responses:
+            score = 0
+
+            # Length score (prefer moderate length)
+            length_score = 1.0 - abs(len(resp) - 1000) / 2000 # Optimal length around 1000 chars
+            length_score = max(0, length_score)  # Ensure non-negative
+
+            # Context reference score (count references to key terms)
+            key_terms = query.lower().split()
+            context_reference_score = sum(1 for term in key_terms if term in resp.lower())
+
+            # Structure score (prefer well-structured responses)
+            structure_score = 0
+            if '1.' in resp or '2.' in resp:
+                structure_score += 0.5
+            if len(resp.split('\n')) > 3:  # multiple paragraphs
+                structure_score += 0.3
+
+            total_score = length_score + (context_reference_score * 0.3) + structure_score
+            scored_responses.append((resp, total_score))
+
+        # Select response with highest score
+        best_response = max(scored_responses, key=lambda x: x[1])[0]
+
+        self.logger.info("Selected most consistent response based on scoring.")
+        return best_response
+    
     def react_research_workflow(self, query):
         """
         Implement ReAct prompting for structured research workflow
