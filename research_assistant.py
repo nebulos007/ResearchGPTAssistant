@@ -459,34 +459,75 @@ Provide a brief explanation of your decision.
         
         # TODO: Implement ReAct loop
         max_steps = 5
+
+        # Initial context gathering
+        initial_context = self.doc_processor.find_similar_chunks(query, top_k=8)
+        context_text = self._build_context_from_chunks(initial_context)
         for step in range(max_steps):
-            # TODO: Generate thought
-            thought = ""
+            self.logger.info(f"ReAct workflow step {step + 1}/{max_steps}")
+            # Generate thought about what to do next
+            thought_prompt = f"""
+            Research Workflow Step {step + 1}
+
+            Research Question: {query}
+
+            Previous Steps: {json.dumps(workflow_steps, indent=2)}
+
+            Available Context: {context_text[:2000]}
+
+            What should I think about or analyze next to answer this research question?
+            Provide a clear thought about what aspect needs attention.
+            """
+            thought = self._call_mistral(thought_prompt, temperature=0.3)
+
+            # Determine action based on thought
+            action_prompt = f"""
+            Action prompt:
+            Based on this thought: {thought}
+
+            What specific action should I take? Choose from:
+              - SEARCH: Look for specific information in the documents
+              - ANALYZE: Examine and interpret findings
+              - COMPARE: Compare different approaches or findings
+              - SYNTHESIZE: Combine information to form conclusions
+              - CONCLUDE: Summarize and finalize the answer
+              
+              Respond with just the action and brief description.
+            """
             
-            # TODO: Determine action
-            action = ""
-            
-            # TODO: Execute action (search, analyze, etc.)
-            observation = ""
-            
-            workflow_steps.append({
-                'step': step + 1,
-                'thought': thought,
-                'action': action,
-                'observation': observation
-            })
-            
-            # TODO: Check if workflow should continue
-            if self._should_conclude_workflow(observation):
+            action = self._call_mistral(action_prompt, temperature=0.2)
+
+            # Execute the action
+            observation = self._execute_react_action(action, query, context_text, workflow_steps)
+
+            # Record workflow step
+            workflow_step = {
+                "step": step + 1,
+                "thought": thought.strip(),
+                "action": action.strip(),
+                "observation": observation.strip()
+            }
+            workflow_steps.append(workflow_step)
+
+            # Check if workflow should conclude
+            if self._should_conclude_workflow(observation, query) or "CONCLUDE" in action.upper():
+                self.logger.info(f"ReAct workflow concluded at step {step + 1}")
                 break
-        
-        # TODO: Generate final conclusion
-        final_answer = ""
-        
-        return {
-            'workflow_steps': workflow_steps,
-            'final_answer': final_answer
+
+        # Generate final conclusion
+        workflow_result = {
+            "query": query,
+            "workflow": workflow_steps,
+            "final_answer": self._generate_final_conclusion(query, workflow_steps)
         }
+        # Add to conversation history
+        self.conversation_history.append({
+            "type": "react_workflow",
+            "query": query,
+            "workflow": workflow_result,
+            "timestamp": time.time()
+        })
+        return workflow_result
     
     def _should_conclude_workflow(self, observation):
         """
