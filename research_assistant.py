@@ -701,6 +701,40 @@ Provide a brief explanation of your decision.
 
         return verification_data
     
+    def _extract_improved_answer(self, verification_result: str, original_answer: str) -> str:
+        """
+        Extract improved answer from verification result
+
+        Args:
+            verification_result (str): Full verification output
+            original_answer (str): Original generated answer
+
+        Returns:
+            str: Improved answer if found, else original answer
+        """
+        # Look for improved version in the verification result
+        lines = verification_result.split('\n')
+        improved_section = False
+        improved_lines = []
+
+        for line in lines:
+            line = line.strip()
+            if 'improved' in line.lower() and ('version' in line.lower() or 'answer' in line.lower()):
+                improved_section = True
+                continue
+            elif improved_section and line.strip():
+                # Skip lines that look like section headers
+                if not (line.strip().startswith('**') or line.strip().startswith('#')):
+                    improved_lines.append(line)
+                
+        if improved_lines:
+            improved_answer = '\n'.join(improved_lines).strip()
+            # Only return if it's meaningfully different and longer than original
+            if len(improved_answer) > len(original_answer) * 0.5:
+                return improved_answer
+            
+        return original_answer
+
     def answer_research_question(self, query, use_cot=True, use_verification=True):
         """
         Main method to answer research questions
