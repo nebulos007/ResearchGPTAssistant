@@ -627,6 +627,34 @@ Provide a brief explanation of your decision.
         # Parse decision
         return "YES" in decision.upper() or "SUFFICIENT" in decision.upper()
 
+    def _generate_react_conclusion(self, query: str, workflow_steps: List[Dict], context: str) -> str:
+        """
+        Generate final conclusion from ReAct workflow steps
+
+        Args:
+            query (str): Research question
+            workflow_steps (list): Completed workflow steps
+            context (str): Available context
+        
+        Returns:
+            str: Final conclusion
+        """
+
+        conclusion_prompt = f"""
+        Based on the structured research workflow conducted, please provide a comprehensive answer to the research question: {query}
+
+        Research question: {query}
+
+        Workflow Steps completed:
+        {json.dumps(workflow_steps, indent=2)}
+
+        Original Context:
+        {context[:1000]}...
+
+        Please synthesize all findings into a clear, comprehensive answer that addresses the research question directly.
+        """
+        final_answer = self._call_mistral(conclusion_prompt, temperature=0.3)
+        return final_answer
     
     def verify_and_edit_answer(self, answer, original_query, context):
         """
