@@ -947,7 +947,7 @@ Provide a brief explanation of your decision.
         self.conversation_history = []
         self.logger.info("Conversation history cleared.")
 
-
+"""
 # Example usage and testing
 if __name__ == "__main__":
     # This section can be used for quick testing of the ResearchAssistant class
@@ -1026,3 +1026,4 @@ if __name__ == "__main__":
                 print(f"\n" + "="*50)
                 print(f"Testing different strategies for query: {query}")
                 print("="*50)
+"""
