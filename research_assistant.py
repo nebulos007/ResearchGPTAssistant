@@ -609,8 +609,23 @@ Provide a brief explanation of your decision.
             
         return ""
     
-    def _should_conclude_workflow(self, observation):
-        
+    def _should_conclude_workflow(self, observation: str, query: str) -> bool:
+        """
+        Determine if the ReAct workflow has sufficient information to conclude
+
+        Args:
+            observation (str): Latest observation from workflow step
+            query (str): Research question
+
+        Returns:
+            bool: Whether to conclude the workflow
+        """
+        # Use Mistral to assess if we have enough information
+        conclusion_prompt = self.prompts['workflow_conclusion'].format(query=query, observation=observation)
+        decision = self._call_mistral(conclusion_prompt, temperature=0.1)
+
+        # Parse decision
+        return "YES" in decision.upper() or "SUFFICIENT" in decision.upper()
 
     
     def verify_and_edit_answer(self, answer, original_query, context):
