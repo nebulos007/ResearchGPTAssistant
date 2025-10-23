@@ -797,9 +797,11 @@ Provide a brief explanation of your decision.
 
         return "\n".join(context_parts)
 
-    def answer_research_question(self, query, use_cot=True, use_verification=True):
+    def answer_research_question(self, query: str, use_cot: bool = True, 
+                                 use_verification: bool = True,
+                                 strategy: str = "auto") -> Dict[str, Any]:
         """
-        Main method to answer research questions
+        Main method to answer research questions with multiple strategies
         
         TODO: Implement complete research answering pipeline:
         1. Find relevant document chunks
@@ -812,35 +814,75 @@ Provide a brief explanation of your decision.
             query (str): Research question
             use_cot (bool): Whether to use Chain-of-Thought
             use_verification (bool): Whether to verify answer
+            strategy (str): Strategy to use ("cot", "self_consistency", "react", "auto", "basic")
             
         Returns:
             dict: Complete research response
         """
-        # TODO: Find relevant documents
-        relevant_chunks = self.doc_processor.find_similar_chunks(query, top_k=5)
+        self.logger.info(f"Answering research question: {query[:100]} using strategy: {strategy}...")
+
+        start_time = time.time()
+
+        # Find relevant documents
+        relevant_chunks = self.doc_processor.find_similar_chunks(query, top_k=6)
+
+        if not relevant_chunks:
+            return {
+                'query': query,
+                'answer': "No relevant information found in the document database to answer the question.",
+                'relevant_documents': 0,
+                'sources_used': [],
+                'strategy_used': 'none',
+                'time_taken': time.time() - start_time
+            }
         
-        # TODO: Generate answer using chosen strategy
-        if use_cot:
+        # Determine strategy
+        if strategy == "auto":
+            strategy = self._select_best_strategy(query, relevant_chunks)
+
+        # Generate answer based on strategy
+        if strategy == "react":
+            workflow_result = self.react_research_workflow(query)
+            answer = workflow_result['final_answer']
+            strategy_data = workflow_result
+        elif strategy == "self_consistency":
+            answer = self.self_consistency_generate(query, relevant_chunks)
+            strategy_data = {'type': 'self_consistency', 'num_attempts': 3}
+        elif strategy == "cot" or use_cot:
             answer = self.chain_of_thought_reasoning(query, relevant_chunks)
+            strategy_data = {'type': 'chain_of_thought'}
         else:
-            # TODO: Implement basic QA without CoT
-            answer = ""
-        
-        # TODO: Verify answer if requested
-        if use_verification:
-            verification_data = self.verify_and_edit_answer(answer, query, str(relevant_chunks))
+            # Basic QA without CoT
+            context = self._build_context_from_chunks(relevant_chunks)
+            basic_prompt = self.prompts['basic_qa'].format(query=query, context=context)
+            answer = self._call_mistral(basic_prompt)
+            strategy_data = {'type': 'basic_qa'}
+            
+        # Verify answer if requested
+        verification_data = None
+        final_answer = answer
+
+        if use_verification and answer and not answer.startswith("API Error:"):
+            context_str = self._build_context_from_chunks(relevant_chunks)
+            verification_data = self.verify_and_edit_answer(answer, query, context_str)
             final_answer = verification_data['improved_answer']
-        else:
-            final_answer = answer
-            verification_data = None
-        
-        # TODO: Compile complete response
+
+        # Compile complete response
         response = {
             'query': query,
             'relevant_documents': len(relevant_chunks),
             'answer': final_answer,
             'verification': verification_data,
-            'sources_used': [chunk[2] for chunk in relevant_chunks]  # doc_ids
+            'sources_used': strategy,
+            'strategy_data': strategy_data,
+            'time_taken': time.time() - start_time
+            'api_call_count': self.api_call_count,
+            'total_tokens_used': self.total_tokens_used,
+            'timestamp': time.time()
         }
-        
+
+        self.logger.info(f"Completed answering question in {response['time_taken']:.2f} seconds.")
+
         return response
+        
+    def _select_best_strategy(self, query: str, context_chunks: List[Tuple]) -> str:
