@@ -875,10 +875,10 @@ Provide a brief explanation of your decision.
             'verification': verification_data,
             'sources_used': strategy,
             'strategy_data': strategy_data,
-            'time_taken': time.time() - start_time
+            'time_taken': time.time() - start_time,
             'api_call_count': self.api_call_count,
             'total_tokens_used': self.total_tokens_used,
-            'timestamp': time.time()
+            'timestamp': time.time()    
         }
 
         self.logger.info(f"Completed answering question in {response['time_taken']:.2f} seconds.")
@@ -917,4 +917,35 @@ Provide a brief explanation of your decision.
         
         # Default to CoT for general cases
         return "cot"
+    
+    def get_conversation_history(self) -> List[Dict[str, Any]]:
+        """
+        Retrieve the conversation history
+        
+        Returns:
+            list: Conversation history entries
+        """
+        return self.conversation_history
+    
+    def get_api_usage_stats(self) -> Dict[str, Any]:
+        """
+        Retrieve API usage statistics
+        
+        Returns:
+            dict: API usage stats
+        """
+        return {
+            'api_call_count': self.api_call_count,
+            'total_tokens_used': self.total_tokens_used,
+            'average_tokens_per_call': (self.total_tokens_used / max(1, self.api_call_count))
+        }
             
+    def clear_conversation_history(self):
+        """
+        Clear the conversation history
+        """
+        self.conversation_history = []
+        self.logger.info("Conversation history cleared.")
+
+
+
