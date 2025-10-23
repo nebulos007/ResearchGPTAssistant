@@ -777,6 +777,25 @@ Provide a brief explanation of your decision.
         # Heuristic confidence score
         confidence = 0.7 + (0.1 * positive_count) - (0.15 * negative_count)
         return max(0.0, min(confidence, 1.0))
+    
+    def _build_context_from_chunks(self, context_chunks: List[Tuple]) -> str:
+        """
+        Build a single context string from document chunks
+        
+        Args:
+            context_chunks (list): List of (text, score, doc_id) tuples
+
+        Returns:
+            str: Combined context string
+        """
+        if not context_chunks:
+            return "No relevant context found in documents."
+        
+        context_parts = []
+        for i, (chunk_text, score, doc_id) in enumerate(context_chunks):
+            context_parts.append(f"Source {i+1} (from Document ID: {doc_id}):\n{chunk_text}\n")
+
+        return "\n".join(context_parts)
 
     def answer_research_question(self, query, use_cot=True, use_verification=True):
         """
