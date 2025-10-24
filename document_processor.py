@@ -15,6 +15,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import os
 import re
+import logging
 
 class DocumentProcessor:
     def __init__(self, config):
@@ -38,6 +39,8 @@ class DocumentProcessor:
         self.document_vectors = None  # Store TF-IDF vectors
         self.chunk_to_doc_mapping = []  # Map chunk index to document ID
         self.all_chunks = []  # Store all text chunks for vectorization
+        # Initialize logger
+        self.logger = logging.getLogger('DocumentProcessor')
     
     def extract_text_from_pdf(self, pdf_path):
         """
@@ -514,7 +517,14 @@ class DocumentProcessor:
         except Exception as e:
             self.logger.error(f"Error searching within document {doc_id}: {str(e)}")
             return []
-        
+
+    def get_document_by_id(self, doc_id):
+        # Return document data by ID (or None if not found).
+        if doc_id not in self.documents:
+            self.logger.warning(f"Requested document ID {doc_id} not found.")
+            return None
+        return self.documents[doc_id]
+
     def save_processed_documents(self, output_dir):
         """
         Save processed document data to files
